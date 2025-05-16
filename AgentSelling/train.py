@@ -4,12 +4,16 @@ from AgentSelling.Env import Env
 from AgentSelling.Model import TransformerEncoder
 from AgentSelling.ReplayBuffer import ReplayBuffer
 from AgentSelling.Agent import Agent
+from log import Logger
+
+train_logger = Logger('train', path="trainlog.log")
 
 # Training loop sketch
 def train(agent, env, replay_buffer, num_episodes=1000,
           batch_size=64, target_update_freq=10):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device("mps" if torch.mps.is_available() else device)
+    print(device)
     for ep in range(1, num_episodes + 1):
         price_seq, balances = env.reset()  # returns [T, M], [2]
         done = False
@@ -34,7 +38,8 @@ def train(agent, env, replay_buffer, num_episodes=1000,
         if ep % target_update_freq == 0:
             agent.update_target()
 
-        print(f"Episode {ep}, Reward: {ep_reward:.2f}, Epsilon: {agent.epsilon:.3f}")
+        msg = f"Episode {ep}, Reward: {ep_reward:.2f}, Epsilon: {agent.epsilon:.3f}"
+        train_logger.logger.info(msg)
     torch.save(agent.model.state_dict(), "model.pt")
     torch.save(agent.target_model.state_dict(), "target_model.pt")
 
@@ -49,8 +54,6 @@ def train(agent, env, replay_buffer, num_episodes=1000,
 # train(agent, env, replay_buffer)
 
 if __name__ == "__main__":
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(device)
     env = Env()
     model = TransformerEncoder(
         input_dim=7,  # ohlcv

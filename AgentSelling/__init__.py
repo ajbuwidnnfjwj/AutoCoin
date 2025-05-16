@@ -7,6 +7,7 @@ from AgentSelling.Agent import Agent
 from AgentSelling.train import train
 from AgentSelling.ReplayBuffer import ReplayBuffer
 from Config import access, secret
+from log import Logger
 
 import pyupbit
 
@@ -21,6 +22,7 @@ model = TransformerEncoder(
     dropout=0.1)
 agent = Agent(model=model, init_args=(7, 64, 4, 2, 256, 3, 100, 0.1), lr=1e-4, gamma=0.99)
 upbit = pyupbit.Upbit(access=access, secret=secret)
+logger = Logger("AgentSelling")
 
 def RunAgentSell():
     try:
@@ -30,8 +32,10 @@ def RunAgentSell():
             ]])
         balance = (upbit.get_balance("KRW"), upbit.get_balance("BTC"))
         action = agent.predict((prices, balance))
+        logger.logger.info("hold" if action==0 else
+                           "Buy" if action==1 else
+                           "Sell" if action==2 else None)
 
-        print(action)
         # action 0=Hold, 1=Buy, 2=Sell
         if action == 1:
             krw_balance = upbit.get_balance("KRW") - 5000
@@ -47,4 +51,4 @@ def RunAgentSell():
         train(agent, env, replay_buffer, num_episodes=1000)
 
     except Exception as e:
-        print(e)
+        logger.logger.error(e)
