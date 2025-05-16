@@ -8,6 +8,8 @@ from AgentSelling.Agent import Agent
 # Training loop sketch
 def train(agent, env, replay_buffer, num_episodes=1000,
           batch_size=64, target_update_freq=10):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps" if torch.mps.is_available() else device)
     for ep in range(1, num_episodes + 1):
         price_seq, balances = env.reset()  # returns [T, M], [2]
         done = False
@@ -47,6 +49,8 @@ def train(agent, env, replay_buffer, num_episodes=1000,
 # train(agent, env, replay_buffer)
 
 if __name__ == "__main__":
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
     env = Env()
     model = TransformerEncoder(
         input_dim=7,  # ohlcv

@@ -1,5 +1,5 @@
 from HateSelling.HateSelling import RunHateSell
-from AgentSelling.AgentSelling import RunAgentSell
+from AgentSelling import RunAgentSell
 
 import multiprocessing
 import schedule

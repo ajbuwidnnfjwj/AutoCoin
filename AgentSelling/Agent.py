@@ -6,7 +6,7 @@ import random
 # DQN Agent
 class Agent:
     def __init__(self, model, init_args, lr=1e-4, gamma=0.99,
-                 epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995):
+                 epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, device='cpu'):
         self.model = model
         self.target_model = type(model)(*init_args)  # same constructor args
         self.target_model.load_state_dict(model.state_dict())
@@ -17,11 +17,15 @@ class Agent:
         self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
 
+        self.device = device
+        self.target_model.to(self.device)
+        self.model.to(self.device)
+
     def act(self, price_seq, balance):
         if random.random() < self.epsilon:
             return random.randrange(self.model.head.out_features)
-        price = torch.FloatTensor(price_seq).unsqueeze(0)  # [1, T, M]
-        bal = torch.FloatTensor(balance).unsqueeze(0)  # [1, 2]
+        price = torch.FloatTensor(price_seq).unsqueeze(0).to(self.device)  # [1, T, M]
+        bal = torch.FloatTensor(balance).unsqueeze(0).to(self.device)  # [1, 2]
         with torch.no_grad():
             q_vals = self.model(price, bal)  # [1, num_actions]
         return int(q_vals.argmax(dim=1).item())
@@ -31,7 +35,7 @@ class Agent:
             return
         s_p, s_b, a, r, n_p, n_b, d = replay_buffer.sample(batch_size)
         # Compute Q(s,a)
-        q_values = self.model(s_p, s_b).gather(1, a.unsqueeze(1)).squeeze(1)
+        q_values = self.model(s_p.to(self.device), s_b.to(self.device)).gather(1, a.unsqueeze(1)).squeeze(1)
         # Compute target Q
         with torch.no_grad():
             next_q = self.target_model(n_p, n_b).max(1).values
