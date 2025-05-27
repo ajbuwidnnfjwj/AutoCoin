@@ -26,7 +26,7 @@ logger = Logger("AgentSelling")
 
 def RunAgentSell():
     try:
-        model.load_state_dict(torch.load("target_model.pt"))
+        model.load_state_dict(torch.load("model_params/target_model.pt"))
         prices = np.array(pyupbit.get_ohlcv("KRW-BTC", interval="minute60", count=10).reset_index()[[
                 'open', 'high', 'low', 'close', 'volume'
             ]])

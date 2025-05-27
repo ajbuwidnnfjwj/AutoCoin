@@ -33,12 +33,12 @@ class Agent:
     def update(self, replay_buffer, batch_size):
         if len(replay_buffer) < batch_size:
             return
-        s_p, s_b, a, r, n_p, n_b, d = replay_buffer.sample(batch_size)
+        s_p, s_b, a, r, n_p, n_b, d = [t.to(self.device) for t in replay_buffer.sample(batch_size)]
         # Compute Q(s,a)
         q_values = self.model(s_p.to(self.device), s_b.to(self.device)).gather(1, a.unsqueeze(1)).squeeze(1)
         # Compute target Q
         with torch.no_grad():
-            next_q = self.target_model(n_p, n_b).max(1).values
+            next_q = self.target_model(n_p.to(self.device), n_b.to(self.device)).max(1).values
             target = r + self.gamma * next_q * (1 - d)
         # Loss and optimize
         loss = nn.MSELoss()(q_values, target)

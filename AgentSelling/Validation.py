@@ -18,7 +18,7 @@ model = TransformerEncoder(
         max_len=100,
         dropout=0.1
 )
-model.load_state_dict(torch.load('test_model_param/target_model.pt'))
+model.load_state_dict(torch.load('model_params/target_model.pt'))
 agent = Agent(model=model, init_args=(7,64,4,2,256,3,100,0.1), lr=1e-4, gamma=0.99)
 env = Env.Env()
 state = env.reset()
