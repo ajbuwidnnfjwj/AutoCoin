@@ -6,8 +6,8 @@ from AgentSelling.Env import Env
 from AgentSelling.Agent import Agent
 from AgentSelling.train import train
 from AgentSelling.ReplayBuffer import ReplayBuffer
-from Config import access, secret
 from log import Logger
+from Config import *
 
 import pyupbit
 
@@ -26,7 +26,7 @@ logger = Logger("AgentSelling")
 
 def RunAgentSell():
     try:
-        model.load_state_dict(torch.load("target_model.pt"))
+        model.load_state_dict(torch.load(TMODEL_PARAM_PATH))
         prices = np.array(pyupbit.get_ohlcv("KRW-BTC", interval="minute60", count=10).reset_index()[[
                 'open', 'high', 'low', 'close', 'volume'
             ]])

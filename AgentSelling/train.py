@@ -4,9 +4,10 @@ from AgentSelling.Env import Env
 from AgentSelling.Model import TransformerEncoder
 from AgentSelling.ReplayBuffer import ReplayBuffer
 from AgentSelling.Agent import Agent
+from Config import *
 from log import Logger
 
-train_logger = Logger('train', path="trainlog.log")
+train_logger = Logger('train', path=TRAIN_LOG_PATH)
 
 # Training loop sketch
 def train(agent, env, replay_buffer, num_episodes=1000,
@@ -40,8 +41,8 @@ def train(agent, env, replay_buffer, num_episodes=1000,
 
         msg = f"Episode {ep}, Reward: {ep_reward:.2f}, Epsilon: {agent.epsilon:.3f}"
         train_logger.logger.info(msg)
-    torch.save(agent.model.state_dict(), "model.pt")
-    torch.save(agent.target_model.state_dict(), "target_model.pt")
+    torch.save(agent.model.state_dict(), MODEL_PARAM_PATH)
+    torch.save(agent.target_model.state_dict(), TMODEL_PARAM_PATH)
 
 # Example initialization (assuming you have env and model from earlier)
 # env = TradingEnv(price_series, window_size=200)
