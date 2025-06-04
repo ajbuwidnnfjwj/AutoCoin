@@ -30,22 +30,37 @@ class Env:
         return np.array(price_window, dtype=np.float32), balance
 
     def step(self, action):
-        price = self.market[self.t][3]
+        '''action 0=Hold, 1=Buy, 2=Sell'''
+        price = self.market[self.t][3]  # 현재 시점 종가
+        prev_price = self.market[self.t - 1][3] if self.t > 0 else price
+        old_value = self.cash + self.coin * prev_price
 
-        # 예시: action 0=Hold, 1=Buy, 2=Sell
-        if action == 1:  # Buy all-in
-            self.coin += self.cash / price
-            self.cash = 0.0
-        elif action == 2:  # Sell all
-            self.cash += self.coin * price
-            self.coin = 0.0
-        # 보상 계산
-        new_value = self.cash + self.coin * price
-        old_value = self.cash + self.coin * self.market[self.t - 1][3]
-        reward = (new_value - old_value) / (old_value + 1e-8)
+        next_cash = self.cash
+        next_coin = self.coin
+        reward = 0.0
+
+        if (action == 1 and self.cash >= 10000) or (action == 2 and self.coin > 0.0):
+            # 정상매매 루트
+            if action == 1:
+                krw_volume = self.cash - 5000
+                next_coin = self.coin + krw_volume / price
+                next_cash = self.cash - krw_volume
+            elif action == 2:
+                next_cash = self.cash + self.coin * price
+                next_coin = 0.0
+
+            # 보상 계산
+            new_value = next_cash + next_coin * price
+            reward = (new_value - old_value) / (old_value + 1e-8)
+        elif (action == 1 and self.cash < 10000) or (action == 2 and self.coin <= 0.0):
+            # 잔고와 맞지 않는 거래
+            reward = -1
+
+        self.cash = next_cash
+        self.coin = next_coin
         self.t += 1
         done = (self.t >= len(self.market))
-        return *self._get_state() ,reward, done, {}
+        return *self._get_state(),reward, done, {}
 
 if __name__ == "__main__":
     env = Env()
