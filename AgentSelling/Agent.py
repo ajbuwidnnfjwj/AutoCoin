@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 
+import pyupbit
+from Config import *
+
 # DQN Agent
 class Agent:
     def __init__(self, model, init_args, lr=1e-4, gamma=0.99,
@@ -21,6 +24,8 @@ class Agent:
         self.target_model.to(self.device)
         self.model.to(self.device)
 
+        self.upbit = pyupbit.Upbit(access, secret)
+
     def act(self, price_seq, balance):
         if random.random() < self.epsilon:
             return random.randrange(self.model.head.out_features)
@@ -28,6 +33,12 @@ class Agent:
         bal = torch.FloatTensor(balance).unsqueeze(0).to(self.device)  # [1, 2]
         with torch.no_grad():
             q_vals = self.model(price, bal)  # [1, num_actions]
+
+        if balance[0] < 10000:
+            q_vals[0][1] = -1e9
+        if balance[1] <= 0:
+            q_vals[0][2] = -1e9
+
         return int(q_vals.argmax(dim=1).item())
 
     def update(self, replay_buffer, batch_size):
