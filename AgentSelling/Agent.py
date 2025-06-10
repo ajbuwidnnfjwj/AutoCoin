@@ -49,8 +49,14 @@ class Agent:
         q_values = self.model(s_p.to(self.device), s_b.to(self.device)).gather(1, a.unsqueeze(1)).squeeze(1)
         # Compute target Q
         with torch.no_grad():
-            next_q = self.target_model(n_p.to(self.device), n_b.to(self.device)).max(1).values
-            target = r + self.gamma * next_q * (1 - d)
+            next_q = self.target_model(n_p.to(self.device), n_b.to(self.device))
+
+            mask = torch.zeros_like(next_q)
+            mask[(n_b[:, 0] < 5000), 1] = -1e9  # 매수 불가
+            mask[(n_b[:, 1] <= 0), 2] = -1e9  # 매도 불가
+            next_q += mask
+
+            target = r + self.gamma * next_q.max(1).values * (1 - d)
         # Loss and optimize
         loss = nn.MSELoss()(q_values, target)
         self.optimizer.zero_grad()
