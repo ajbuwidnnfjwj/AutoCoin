@@ -70,6 +70,12 @@ class Agent:
         bal = torch.FloatTensor(state[1]).unsqueeze(0)
         with torch.no_grad():
             q_vals = self.model(price, bal)
+
+        if state[1][0] < 10000:
+            q_vals[0][1] = -1e9
+        if state[1][1] <= 0:
+            q_vals[0][2] = -1e9
+
         return int(q_vals.argmax(dim=1).item())
 
     def update_target(self):
