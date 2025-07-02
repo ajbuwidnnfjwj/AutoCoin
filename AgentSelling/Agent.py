@@ -13,7 +13,7 @@ class Agent:
         self.model = model
         self.target_model = type(model)(*init_args)  # same constructor args
         self.target_model.load_state_dict(model.state_dict())
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=lr)
         self.gamma = gamma
 
         self.epsilon = epsilon_start
