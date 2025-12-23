@@ -1,7 +1,7 @@
 Config.py
-__pychache__/
+__pycache__/
 
 logs/
 train_plot/
 
-AgentSelling/__pychache__/
+AgentSelling/__pycache__/
