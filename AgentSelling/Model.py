@@ -141,6 +141,21 @@ class PolicyNet(nn.Module):
     def forward(self, market: torch.Tensor, portfolio: torch.Tensor):
         x = torch.cat([market, portfolio], dim=-1)  # 포트폴리오 정보와 시장 정보 결합
         return self.network(x)
+    
+class AgentModel(nn.Module):
+    def __init__(self, market_encoder: TransformerEncoder, balance_net: PortfolioNet, policy_net: PolicyNet):
+        super().__init__()
+        self.market_encoder = market_encoder
+        self.balance_net = balance_net
+        self.policy_net = policy_net
+        self.num_actions = policy_net.network[-1].out_features
+
+    def forward(self, price_seq: torch.Tensor, balance: torch.Tensor):
+        # price_seq: [B,T,M], balance: [B,2]
+        encoded_market = self.market_encoder(price_seq)  # [B,D]
+        portfolio = self.balance_net(balance)            # [B,D']
+        action_logits = self.policy_net(encoded_market, portfolio)  # [B,A]
+        return action_logits
 
 if __name__ == "__main__":
     market_encoder = TransformerEncoder(

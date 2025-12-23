@@ -1,30 +1,37 @@
 import torch
 import numpy as np
 
-from AgentSelling.Model import TransformerEncoder
+from AgentSelling.Model import AgentModel, TransformerEncoder, PortfolioNet, PolicyNet
 from AgentSelling.Env import Env
 from AgentSelling.Agent import Agent
 from AgentSelling.train import train
 from AgentSelling.ReplayBuffer import ReplayBuffer
-from Config import access, secret
+from Config import access, secrete
 from log import Logger
 
 import pyupbit
 
-model = TransformerEncoder(
-    input_dim=7,  # ohlcv
-    d_model=64,
-    num_heads=4,
-    num_layers=2,
-    dim_ff=256,
-    num_actions=3,  # Buy / Sell / Hold
-    max_len=100,
-    dropout=0.1)
-agent = Agent(model=model, init_args=(7, 64, 4, 2, 256, 3, 100, 0.1), lr=1e-4, gamma=0.99)
-upbit = pyupbit.Upbit(access=access, secret=secret)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("mps" if torch.mps.is_available() else device)
+
+model = AgentModel(
+    market_encoder=TransformerEncoder(
+        ohlcv_dim=5,
+        d_model=64,
+        num_heads=4,
+        num_layers=2,
+        dim_ff=256,
+        max_len=100,
+        dropout=0.1
+    ),
+    balance_net=PortfolioNet(portfolio_dim=2, hidden_dim=32, out_dim=64),
+    policy_net=PolicyNet(encode_dim=128, hidden_dim=32, num_actions=3)
+)
+agent = Agent(model=model, lr=1e-4, gamma=0.99, device=device, train=True)
+upbit = pyupbit.Upbit(access=access, secret=secrete)
 logger = Logger("AgentSelling")
 
-def RunAgentSell():
+def RunAgentSell(retrain_on_traid=False):
     try:
         model.load_state_dict(torch.load("model_params/model.pt"))
         prices = np.array(pyupbit.get_ohlcv("KRW-BTC", interval="minute60", count=10).reset_index()[[
@@ -46,9 +53,10 @@ def RunAgentSell():
             btc_balance = upbit.get_balance("BTC")
             upbit.sell_market_order("KRW-BTC", btc_balance)
 
-        env = Env()
-        replay_buffer = ReplayBuffer(capacity=10000)
-        train(agent, env, replay_buffer, num_episodes=1000)
+        if retrain_on_traid:
+            env = Env(train=True)
+            replay_buffer = ReplayBuffer(capacity=10000)
+            train(agent, env, replay_buffer, num_episodes=1000)
 
     except Exception as e:
         logger.logger.error(e)
