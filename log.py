@@ -1,10 +1,7 @@
 import logging
 
-from Config import TRADE_LOG_PATH
-
-
 class Logger(object):
-    def __init__(self, name, level=logging.DEBUG, path=TRADE_LOG_PATH):
+    def __init__(self, name, level=logging.DEBUG, path="logs/tradelog.log"):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
 

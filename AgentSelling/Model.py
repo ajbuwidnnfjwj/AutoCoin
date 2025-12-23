@@ -86,62 +86,105 @@ class TransformerLayer(nn.Module):
         return x
 
 class TransformerEncoder(nn.Module):
-    """여러 레이어를 쌓은 Relative Position Transformer Encoder"""
-    def __init__(self,
-                 input_dim: int,
-                 d_model: int,
-                 num_heads: int,
-                 num_layers: int,
-                 dim_ff: int,
-                 num_actions: int,
-                 max_len: int = 512,
-                 dropout: float = 0.1):
+    """시장 정보 인코딩을 위한 Transformer Encoder"""
+    def __init__(
+        self,
+        ohlcv_dim: int,
+        d_model: int,
+        num_heads: int,
+        num_layers: int,
+        dim_ff: int,
+        max_len: int = 512,
+        dropout: float = 0.1,
+        pooling: str = "last",  # "last" or "mean"
+    ):
         super().__init__()
-        self.embed = nn.Linear(input_dim, d_model)
-        self.layers = nn.ModuleList([
-            TransformerLayer(d_model, num_heads, dim_ff, dropout, max_len)
-            for _ in range(num_layers)
-        ])
-        self.head = nn.Linear(d_model, num_actions)
+        self.pooling = pooling
+        self.embed = nn.Linear(ohlcv_dim, d_model)
+        self.layers = nn.ModuleList(
+            [TransformerLayer(d_model, num_heads, dim_ff, dropout, max_len) for _ in range(num_layers)]
+        )
 
-    def forward(self, x: torch.Tensor, balance: torch.Tensor):
-        # x: [B, T, input_dim], balance: [B, 2]
-        balance = balance.unsqueeze(1).repeat(1, x.size(1), 1)
-        x = self.embed(torch.cat((x, balance), dim=2))
+    def forward(self, ohlcv_seq: torch.Tensor) -> torch.Tensor:
+        # ohlcv_seq: [B,T,ohlcv_dim]
+        x = self.embed(ohlcv_seq)  # [B,T,D]
         for layer in self.layers:
             x = layer(x)
-        # 시퀀스 차원 평균 풀링
-        x = x.mean(dim=1)
-        return self.head(x)         # [B, num_actions]
+        if self.pooling == "mean":
+            return x.mean(dim=1)   # [B,D]
+        return x[:, -1, :]         # [B,D]
 
-class MLPHead(nn.Module):
-    def __init__(self, d_combined_dim: int, num_actions: int):
+class PortfolioNet(nn.Module):
+    def __init__(self, portfolio_dim: int, hidden_dim: int, out_dim: int, dropout: float = 0.1):
         super().__init__()
+        self.portfolio_dim = portfolio_dim
         self.network = nn.Sequential(
-            nn.Linear(d_combined_dim, d_combined_dim//2),
+            nn.Linear(portfolio_dim, hidden_dim),
             nn.GELU(),
-            nn.Linear(d_combined_dim//2, num_actions),
-            nn.Softmax(dim=-1)
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, out_dim),
         )
 
     def forward(self, x: torch.Tensor):
         return self.network(x)
+    
+class PolicyNet(nn.Module):
+    def __init__(self, encode_dim: int, hidden_dim: int, num_actions: int, dropout: float = 0.1):
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(encode_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, num_actions),
+        )
+
+    def forward(self, market: torch.Tensor, portfolio: torch.Tensor):
+        x = torch.cat([market, portfolio], dim=-1)  # 포트폴리오 정보와 시장 정보 결합
+        return self.network(x)
+    
+class AgentModel(nn.Module):
+    def __init__(self, market_encoder: TransformerEncoder, balance_net: PortfolioNet, policy_net: PolicyNet):
+        super().__init__()
+        self.market_encoder = market_encoder
+        self.balance_net = balance_net
+        self.policy_net = policy_net
+        self.num_actions = policy_net.network[-1].out_features
+
+    def forward(self, price_seq: torch.Tensor, balance: torch.Tensor):
+        # price_seq: [B,T,M], balance: [B,2]
+        encoded_market = self.market_encoder(price_seq)  # [B,D]
+        portfolio = self.balance_net(balance)            # [B,D']
+        action_logits = self.policy_net(encoded_market, portfolio)  # [B,A]
+        return action_logits
 
 if __name__ == "__main__":
-    model = TransformerEncoder(
-        input_dim=5,    # 예: [종가, 거래량, RSI, MACD, Signal]
+    market_encoder = TransformerEncoder(
+        ohlcv_dim=5,
         d_model=64,
         num_heads=4,
         num_layers=2,
         dim_ff=256,
-        num_actions=3,  # Buy / Sell / Hold
-        max_len=100,
-        dropout=0.1
+        max_len=512,
+        dropout=0.1,
+        pooling="last",
     )
-    mlp_head = MLPHead(d_combined_dim=5, num_actions=3)
-    dummy = torch.randn(8, 30, 5)  # batch=8, seq_len=30
-    out = model(dummy)             # [8, 3]
-    balance = torch.randn(1,2)
-    out = mlp_head(torch.cat((torch.Tensor(out[-1]), balance.squeeze()), dim=0))
-    print(out.shape)  # → torch.Size([8, 3])
-    print(out)
+    balance_net = PortfolioNet(portfolio_dim=2, hidden_dim=32, out_dim=64)
+    policy_net = PolicyNet(encode_dim=128, hidden_dim=32, num_actions=3)
+
+    B, T = 8, 64
+    dummy_ohlcv = torch.randn(B, T, 5)  # [B=8, T=100, ohlcv_dim=5]
+    state = torch.randn(B, 2)      # [B=8, num_assets=3]
+
+    encoded_market = market_encoder(dummy_ohlcv)  # [B, D=64]
+    portfolio = balance_net(state)                 # [B, num_actions=3]
+    action_logits = policy_net(encoded_market, portfolio)
+    print("Encoded Market Shape:", encoded_market.shape)
+    print("Portfolio Shape:", portfolio.shape)  
+    print("Action Logits Shape:", action_logits.shape)
+    print(action_logits)
+
+    dist = torch.distributions.Categorical(logits=action_logits)
+    action = dist.sample()
+    log_prob = dist.log_prob(action)
+    print("Sampled Action:", action)
+    print("Log Probability of Action:", log_prob)
