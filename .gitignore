@@ -1,5 +1,6 @@
 Config.py
 __pycache__/
+venv/
 
 logs/
 train_plot/
