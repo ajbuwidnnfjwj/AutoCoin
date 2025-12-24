@@ -65,6 +65,7 @@ def train(agent, num_episodes=1000,
     print(device)
 
     os.makedirs("model_params", exist_ok=True)
+    os.makedirs(f"model_params/{run_name}", exist_ok=True)
     os.makedirs("train_plot", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
 
