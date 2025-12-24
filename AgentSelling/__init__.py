@@ -2,8 +2,8 @@ import torch
 import numpy as np
 
 from AgentSelling.Model import AgentModel, TransformerEncoder, PortfolioNet, PolicyNet
-from AgentSelling.Env import Env
 from AgentSelling.Agent import Agent
+from AgentSelling.Env import Env
 from AgentSelling.train import train
 from AgentSelling.ReplayBuffer import ReplayBuffer
 from Config import access, secrete
@@ -11,27 +11,30 @@ from log import Logger
 
 import pyupbit
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("mps" if torch.mps.is_available() else device)
+def build_model():
+    return AgentModel(
+        market_encoder=TransformerEncoder(
+            ohlcv_dim=5,
+            d_model=64,
+            num_heads=4,
+            num_layers=2,
+            dim_ff=256,
+            max_len=100,
+            dropout=0.1
+        ),
+        balance_net=PortfolioNet(portfolio_dim=2, hidden_dim=32, out_dim=64),
+        policy_net=PolicyNet(encode_dim=128, hidden_dim=32, num_actions=3)
+    )
 
-model = AgentModel(
-    market_encoder=TransformerEncoder(
-        ohlcv_dim=5,
-        d_model=64,
-        num_heads=4,
-        num_layers=2,
-        dim_ff=256,
-        max_len=100,
-        dropout=0.1
-    ),
-    balance_net=PortfolioNet(portfolio_dim=2, hidden_dim=32, out_dim=64),
-    policy_net=PolicyNet(encode_dim=128, hidden_dim=32, num_actions=3)
-)
-agent = Agent(model=model, lr=1e-4, gamma=0.99, device=device, train=True)
 upbit = pyupbit.Upbit(access=access, secret=secrete)
 logger = Logger("AgentSelling")
 
 def RunAgentSell(retrain_on_traid=False):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps" if torch.mps.is_available() else device)
+
+    model = build_model()
+    agent = Agent(model=model, lr=1e-4, gamma=0.99, device=device, train=False)
     try:
         model.load_state_dict(torch.load("model_params/model.pt"))
         prices = np.array(pyupbit.get_ohlcv("KRW-BTC", interval="minute60", count=10).reset_index()[[

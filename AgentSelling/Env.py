@@ -3,9 +3,9 @@ import numpy as np
 from Config import access, secrete
 
 class Env:
-    def __init__(self, window_size=10, train: bool=True):
+    def __init__(self, window_size=10, train: bool=True, count=24000, interval="minute60", period=1):
         self.window = window_size
-        self.market = np.array(pyupbit.get_ohlcv("KRW-BTC").reset_index()[[
+        self.market = np.array(pyupbit.get_ohlcv("KRW-BTC", count=count, interval=interval, period=period).reset_index()[[
             'open', 'high', 'low', 'close', 'volume'
         ]], dtype=np.float32)
         self.train = train

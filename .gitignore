@@ -1,8 +1,8 @@
 Config.py
 __pycache__/
 venv/
+AgentSelling/__pycache__/
 
 logs/
 train_plot/
-
-AgentSelling/__pycache__/
+model_params/

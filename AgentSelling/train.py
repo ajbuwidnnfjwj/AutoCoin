@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import os
+import copy
 
 train_logger = Logger('train', path="logs/trainlog.log")
 
@@ -58,7 +59,8 @@ def visualize_episode(episode, history):
 # Training loop sketch
 def train(agent, num_episodes=1000,
           batch_size=64, target_update_freq=10, replay_buff_capacity=10000, device='cpu',
-          checkpoint :int = 100, save_best: bool = True):
+          checkpoint :int = 100, save_best: bool = True,
+          run_name: str = "default_run"):
     
     print(device)
 
@@ -114,20 +116,22 @@ def train(agent, num_episodes=1000,
         train_logger.logger.info(msg)
 
         if ep % checkpoint == 0:
-            torch.save(agent.model.state_dict(), f"model_params/model_ep_{ep}.pt")
-            torch.save(agent.target_model.state_dict(), f"model_params/target_model_ep_{ep}.pt")
+            torch.save(agent.model.state_dict(), f"model_params/{run_name}/model_ep_{ep}.pt")
+            torch.save(agent.target_model.state_dict(), f"model_params/{run_name}/target_model_ep_{ep}.pt")
 
         if save_best and best_reward < ep_reward:
             best_reward = ep_reward
-            best_param = agent.model.state_dict()
+            best_param = copy.deepcopy(agent.model.state_dict())
             best_ep = ep
             msg = f"Epoch {ep}: New best model saved with reward {best_reward:.2f}"
 
-    torch.save(agent.model.state_dict(), "model_params/model.pt")
-    torch.save(agent.target_model.state_dict(), "model_params/target_model.pt")
+    torch.save(agent.model.state_dict(), f"model_params/{run_name}/model.pt")
+    torch.save(agent.target_model.state_dict(), f"model_params/{run_name}/target_model.pt")
     if save_best and best_param is not None:
-        torch.save(best_param, f"model_params/best_model_epoch_{best_ep}.pt")
+        torch.save(best_param, f"model_params/{run_name}/best_model_epoch_{best_ep}.pt")
         train_logger.logger.info(msg)
+
+    return {"best_reward": best_reward, "best_ckpt": f"model_params/{run_name}/best_model_epoch_{best_ep}.pt"}
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
