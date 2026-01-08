@@ -4,7 +4,7 @@ from AgentSelling.Env import Env
 from AgentSelling.Model import AgentModel, TransformerEncoder, PortfolioNet, PolicyNet
 from AgentSelling.ReplayBuffer import ReplayBuffer
 from AgentSelling.Agent import Agent
-from log import Logger
+from AgentSelling.log import Logger
 
 import matplotlib.pyplot as plt
 import numpy as np

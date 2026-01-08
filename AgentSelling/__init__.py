@@ -6,10 +6,16 @@ from AgentSelling.Agent import Agent
 from AgentSelling.Env import Env
 from AgentSelling.train import train
 from AgentSelling.ReplayBuffer import ReplayBuffer
-from Config import access, secrete
-from log import Logger
+from AgentSelling.log import Logger
 
 import pyupbit
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
 
 def build_model():
     return AgentModel(
@@ -26,7 +32,7 @@ def build_model():
         policy_net=PolicyNet(encode_dim=128, hidden_dim=32, num_actions=3)
     )
 
-upbit = pyupbit.Upbit(access=access, secret=secrete)
+upbit = pyupbit.Upbit(access=os.getenv("access"), secret=os.getenv("secrete"))
 logger = Logger("AgentSelling")
 
 def RunAgentSell(retrain_on_traid=False):

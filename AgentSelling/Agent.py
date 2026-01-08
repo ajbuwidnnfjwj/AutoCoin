@@ -6,7 +6,6 @@ import torch.optim as optim
 import random
 
 import pyupbit
-from Config import *
 
 # DQN Agent
 class Agent:

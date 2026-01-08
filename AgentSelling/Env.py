@@ -1,6 +1,8 @@
 import pyupbit
 import numpy as np
-from Config import access, secrete
+
+from dotenv import load_dotenv
+import os
 
 class Env:
     def __init__(self, window_size=10, train: bool=True, count=24000, interval="minute60", period=1):
@@ -16,7 +18,7 @@ class Env:
             self.init_cash = 100000.0  # 10만원
             self.init_coin = 0.0
         else:
-            self.upbit = pyupbit.Upbit(access, secrete)
+            self.upbit = pyupbit.Upbit(os.getenv("access"), os.getenv("secrete"))
             self.init_cash = self.upbit.get_balance("KRW")
             self.init_coin = self.upbit.get_balance("BTC")
 

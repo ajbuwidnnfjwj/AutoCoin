@@ -1,9 +1,11 @@
 import pyupbit
 import requests
 import time
-from Config import access, secret
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-upbit = pyupbit.Upbit(access, secret)
+upbit = pyupbit.Upbit(os.getenv("access"), os.getenv("secret"))
 
 def get_orderbook_and_price():
     orderbook_url = "https://api.upbit.com/v1/orderbook?markets=KRW-BTC&level=0"
