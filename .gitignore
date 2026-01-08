@@ -6,3 +6,5 @@ AgentSelling/__pycache__/
 logs/
 train_plot/
 model_params/
+
+agent_training.py

@@ -8,6 +8,7 @@ class Env:
         self.market = np.array(pyupbit.get_ohlcv("KRW-BTC", count=count, interval=interval, period=period).reset_index()[[
             'open', 'high', 'low', 'close', 'volume'
         ]], dtype=np.float32)
+        print("마켓 데이터 로드 완료:", self.market.shape)
         self.train = train
 
         if train:
